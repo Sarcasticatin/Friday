@@ -1,0 +1,22 @@
+name: jarvis_flutter_starter
+description: Minimal Jarvis-style Flutter starter for Android (upload to GitHub, build on Codemagic)
+version: 0.1.0+1
+environment:
+  sdk: ">=2.18.0 <3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^0.13.6
+  flutter_tts: ^3.5.2
+  speech_to_text: ^5.4.0
+  provider: ^6.0.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/
