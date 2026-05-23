@@ -1,202 +1,60 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GHOST-AI // JARVIS VOICE NODE</title>
-    <style>
-        body {
-            background-color: #000;
-            color: #00ff00;
-            font-family: 'Courier New', Courier, monospace;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            overflow: hidden;
-            touch-action: manipulation;
-        }
-        .container {
-            border: 1px solid #00ff00;
-            width: 90vw;
-            max-width: 400px;
-            height: 85vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 20px;
-            box-sizing: border-box;
-            box-shadow: 0 0 15px rgba(0, 255, 0, 0.2);
-        }
-        .header {
-            font-weight: bold;
-            border-bottom: 1px solid #00ff00;
-            padding-bottom: 10px;
-            text-align: center;
-            letter-spacing: 2px;
-        }
-        .terminal-box {
-            flex-grow: 1;
-            margin: 20px 0;
-            padding: 15px;
-            border: 1px dashed #00ff00;
-            background-color: rgba(0, 20, 0, 0.1);
-            overflow-y: auto;
-            font-size: 14px;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-        }
-        .voice-action-btn {
-            background: #000;
-            color: #00ff00;
-            border: 2px solid #00ff00;
-            padding: 25px;
-            font-size: 18px;
-            font-weight: bold;
-            font-family: inherit;
-            cursor: pointer;
-            text-align: center;
-            transition: all 0.3s ease;
-            box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
-            -webkit-tap-highlight-color: transparent;
-        }
-        .voice-action-btn.recording {
-            color: #ff0000;
-            border-color: #ff0000;
-            box-shadow: 0 0 20px #ff0000;
-            animation: pulse 1.5s infinite;
-        }
-        .voice-action-btn.processing {
-            color: #ffff00;
-            border-color: #ffff00;
-            box-shadow: 0 0 20px #ffff00;
-        }
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.02); }
-            100% { transform: scale(1); }
-        }
-    </style>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body{
+background:black;
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
+}
+
+button{
+padding:20px;
+font-size:20px;
+background:black;
+color:#00ff00;
+border:2px solid #00ff00;
+}
+</style>
 </head>
+
 <body>
 
-<div class="container">
-    <div class="header">
-        <span>GHOST-AI // JARVIS CORE</span>
-    </div>
-    <div class="terminal-box" id="terminal">[SYSTEM]: Voice engine online. Tap button to activate.</div>
-    <button id="actionBtn" class="voice-action-btn" onclick="handleVoiceNodeTap()">TAP TO SPEAK</button>
-</div>
+<button id="btn">TEST BUTTON</button>
 
 <script>
-    const OPENAI_API_KEY = ""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”";
-    let mediaRecorder = null;
-    let audioChunks = [];
-    let isRecording = false;
-    let audioStream = null;
-    
-    const terminal = document.getElementById('terminal');
-    const actionBtn = document.getElementById('actionBtn');
 
-    function logToTerminal(sender, message) {
-        terminal.innerHTML += `<br><br>[${sender}]: ${message}`;
-        terminal.scrollTop = terminal.scrollHeight;
-    }
+window.onload = () => {
 
-    async function handleVoiceNodeTap() {
-        if (isRecording) {
-            stopRecordingAndProcess();
-            return;
-        }
+const btn = document.getElementById("btn");
 
-        isRecording = true;
-        setNodeState('recording', 'INITIALIZING MIC...');
+btn.addEventListener("click", async () => {
 
-        try {
-            // Force Audio Context for Safari
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            if (audioContext.state === 'suspended') await audioContext.resume();
+alert("BUTTON WORKING");
 
-            audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
-            mediaRecorder = new MediaRecorder(audioStream, { mimeType: mimeType });
-            audioChunks = [];
+try {
 
-            mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
-            mediaRecorder.onstop = async () => {
-                const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
-                setNodeState('processing', 'PROCESSING...');
-                await processVoicePayload(audioBlob);
-            };
+await navigator.mediaDevices.getUserMedia({
+audio:true
+});
 
-            mediaRecorder.start();
-            setNodeState('recording', 'LISTENING... (TAP TO STOP)');
-        } catch (err) {
-            isRecording = false;
-            setNodeState('normal', 'TAP TO SPEAK');
-            logToTerminal("ERROR", "Mic Denied: " + err.message);
-        }
-    }
+alert("MIC WORKING");
 
-    function stopRecordingAndProcess() {
-        if (mediaRecorder && mediaRecorder.state === "recording") mediaRecorder.stop();
-        if (audioStream) audioStream.getTracks().forEach(track => track.stop());
-        isRecording = false;
-    }
+} catch(err){
 
-    function setNodeState(state, text) {
-        actionBtn.innerText = text;
-        actionBtn.className = "voice-action-btn";
-        if (state === 'recording') actionBtn.classList.add('recording');
-        if (state === 'processing') actionBtn.classList.add('processing');
-    }
+alert(err.message);
 
-    async function processVoicePayload(audioBlob) {
-        try {
-            const formData = new FormData();
-            formData.append("file", audioBlob, "query.webm");
-            formData.append("model", "whisper-1");
+}
 
-            const transResponse = await fetch("https://api.openai.com/v1/audio/transcriptions", {
-                method: "POST",
-                headers: { "Authorization": `Bearer ${OPENAI_API_KEY}` },
-                body: formData
-            });
-            const transData = await transResponse.json();
-            const userCommand = transData.text;
-            
-            if(!userCommand) { setNodeState('normal', 'TAP TO SPEAK'); return; }
-            logToTerminal("USER", userCommand);
+});
 
-            const gptResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${OPENAI_API_KEY}` },
-                body: JSON.stringify({
-                    model: "gpt-4o",
-                    messages: [{ role: "system", content: "Short, sharp Jarvis assistant." }, { role: "user", content: userCommand }]
-                })
-            });
-            const gptData = await gptResponse.json();
-            const reply = gptData.choices[0].message.content;
-            logToTerminal("JARVIS", reply);
+};
 
-            const ttsResponse = await fetch("https://api.openai.com/v1/audio/speech", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${OPENAI_API_KEY}` },
-                body: JSON.stringify({ model: "tts-1", voice: "onyx", input: reply })
-            });
-            
-            const audioBlobReturn = await ttsResponse.blob();
-            const voiceOutput = new Audio(URL.createObjectURL(audioBlobReturn));
-            voiceOutput.onended = () => setNodeState('normal', 'TAP TO SPEAK');
-            await voiceOutput.play();
-
-        } catch (err) {
-            logToTerminal("ERROR", err.message);
-            setNodeState('normal', 'TAP TO SPEAK');
-        }
-    }
 </script>
+
 </body>
 </html>
