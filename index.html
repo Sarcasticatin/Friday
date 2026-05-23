@@ -15,6 +15,7 @@
             height: 100vh;
             margin: 0;
             overflow: hidden;
+            touch-action: manipulation;
         }
         .container {
             border: 1px solid #00ff00;
@@ -46,19 +47,19 @@
             white-space: pre-wrap;
             word-wrap: break-word;
         }
-        /* Bada Voice Button - No Chatbox anymore! */
         .voice-action-btn {
             background: #000;
             color: #00ff00;
             border: 2px solid #00ff00;
-            padding: 20px;
-            font-size: 16px;
+            padding: 25px;
+            font-size: 18px;
             font-weight: bold;
             font-family: inherit;
             cursor: pointer;
             text-align: center;
             transition: all 0.3s ease;
             box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+            -webkit-tap-highlight-color: transparent;
         }
         .voice-action-btn.recording {
             color: #ff0000;
@@ -84,17 +85,12 @@
     <div class="header">
         <span>GHOST-AI // JARVIS CORE</span>
     </div>
-
-    <div class="terminal-box" id="terminal">[SYSTEM]: Voice engine online. Tap the node below to communicate with Jarvis.</div>
-
-    <!-- Ek single main interface button for everything -->
+    <div class="terminal-box" id="terminal">[SYSTEM]: Voice engine online. Tap button to activate.</div>
     <button id="actionBtn" class="voice-action-btn" onclick="handleVoiceNodeTap()">TAP TO SPEAK</button>
 </div>
 
 <script>
-    // ⚠️ Apni Paid OpenAI API Key Yahan Dalein
     const OPENAI_API_KEY = ""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”";
-
     let mediaRecorder = null;
     let audioChunks = [];
     let isRecording = false;
@@ -108,73 +104,56 @@
         terminal.scrollTop = terminal.scrollHeight;
     }
 
-    // Main Control Trigger
     async function handleVoiceNodeTap() {
         if (isRecording) {
-            // Manual Stop if user taps again, or let the 5s timeout handle it
             stopRecordingAndProcess();
-        } else {
-            // Start Listening
-            try {
-                actionBtn.innerText = "INITIALIZING MIC...";
-                audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                
-                mediaRecorder = new MediaRecorder(audioStream, { mimeType: 'audio/webm' });
-                audioChunks = [];
+            return;
+        }
 
-                mediaRecorder.ondataavailable = e => {
-                    if (e.data.size > 0) audioChunks.push(e.data);
-                };
+        isRecording = true;
+        setNodeState('recording', 'INITIALIZING MIC...');
 
-                mediaRecorder.onstop = async () => {
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                    setNodeState('processing', 'PROCESSING AUDIO...');
-                    await processVoicePayload(audioBlob);
-                };
+        try {
+            // Force Audio Context for Safari
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioContext.state === 'suspended') await audioContext.resume();
 
-                // Start hardware capture
-                mediaRecorder.start();
-                isRecording = true;
-                setNodeState('recording', 'LISTENING... (TAP TO SEND)');
-                playLocalBeep(440, 100);
+            audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+            mediaRecorder = new MediaRecorder(audioStream, { mimeType: mimeType });
+            audioChunks = [];
 
-                // Auto stop after 6 seconds if user doesn't tap again
-                setTimeout(() => {
-                    if (isRecording) {
-                        stopRecordingAndProcess();
-                    }
-                }, 6000);
+            mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
+                setNodeState('processing', 'PROCESSING...');
+                await processVoicePayload(audioBlob);
+            };
 
-            } catch (err) {
-                setNodeState('normal', 'TAP TO SPEAK');
-                logToTerminal("ERROR", `Mic Access Denied: ${err.message}. Make sure you allowed permission.`);
-            }
+            mediaRecorder.start();
+            setNodeState('recording', 'LISTENING... (TAP TO STOP)');
+        } catch (err) {
+            isRecording = false;
+            setNodeState('normal', 'TAP TO SPEAK');
+            logToTerminal("ERROR", "Mic Denied: " + err.message);
         }
     }
 
     function stopRecordingAndProcess() {
-        if (mediaRecorder && mediaRecorder.state === "recording") {
-            mediaRecorder.stop();
-        }
-        if (audioStream) {
-            audioStream.getTracks().forEach(track => track.stop());
-        }
+        if (mediaRecorder && mediaRecorder.state === "recording") mediaRecorder.stop();
+        if (audioStream) audioStream.getTracks().forEach(track => track.stop());
         isRecording = false;
     }
 
     function setNodeState(state, text) {
         actionBtn.innerText = text;
-        actionBtn.className = "voice-action-btn"; // Reset class
+        actionBtn.className = "voice-action-btn";
         if (state === 'recording') actionBtn.classList.add('recording');
         if (state === 'processing') actionBtn.classList.add('processing');
     }
 
-    // Core OpenAI Processor
     async function processVoicePayload(audioBlob) {
         try {
-            logToTerminal("SYSTEM", "Sending data to Whisper STT...");
-
-            // 1. Audio to Text (Whisper)
             const formData = new FormData();
             formData.append("file", audioBlob, "query.webm");
             formData.append("model", "whisper-1");
@@ -184,80 +163,39 @@
                 headers: { "Authorization": `Bearer ${OPENAI_API_KEY}` },
                 body: formData
             });
-            
-            if (!transResponse.ok) throw new Error("Whisper failed. Check your API Key/Balance.");
-            
             const transData = await transResponse.json();
             const userCommand = transData.text;
             
-            if(!userCommand || userCommand.trim() === "") {
-                logToTerminal("SYSTEM", "Empty voice data. Command aborted.");
-                setNodeState('normal', 'TAP TO SPEAK');
-                return;
-            }
+            if(!userCommand) { setNodeState('normal', 'TAP TO SPEAK'); return; }
             logToTerminal("USER", userCommand);
 
-            // 2. Intelligence Core (GPT-4o)
-            setNodeState('processing', 'JARVIS IS THINKING...');
             const gptResponse = await fetch("https://api.openai.com/v1/chat/completions", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${OPENAI_API_KEY}`
-                },
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${OPENAI_API_KEY}` },
                 body: JSON.stringify({
                     model: "gpt-4o",
-                    messages: [
-                        { role: "system", content: "You are Jarvis. Tony Stark's personal AI. Keep responses extremely short, sharp, and highly conversational. Max 2 sentences." },
-                        { role: "user", content: userCommand }
-                    ]
+                    messages: [{ role: "system", content: "Short, sharp Jarvis assistant." }, { role: "user", content: userCommand }]
                 })
             });
             const gptData = await gptResponse.json();
-            const jarvisReply = gptData.choices[0].message.content;
-            logToTerminal("JARVIS", jarvisReply);
+            const reply = gptData.choices[0].message.content;
+            logToTerminal("JARVIS", reply);
 
-            // 3. Audio Synthesis (OpenAI TTS Onyx)
-            setNodeState('processing', 'SPEAKING...');
             const ttsResponse = await fetch("https://api.openai.com/v1/audio/speech", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${OPENAI_API_KEY}`
-                },
-                body: JSON.stringify({
-                    model: "tts-1",
-                    voice: "onyx", 
-                    input: jarvisReply
-                })
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${OPENAI_API_KEY}` },
+                body: JSON.stringify({ model: "tts-1", voice: "onyx", input: reply })
             });
             
             const audioBlobReturn = await ttsResponse.blob();
-            const audioUrl = URL.createObjectURL(audioBlobReturn);
-            const voiceOutput = new Audio(audioUrl);
-            
-            voiceOutput.onended = () => {
-                setNodeState('normal', 'TAP TO SPEAK');
-            };
-
+            const voiceOutput = new Audio(URL.createObjectURL(audioBlobReturn));
+            voiceOutput.onended = () => setNodeState('normal', 'TAP TO SPEAK');
             await voiceOutput.play();
 
         } catch (err) {
             logToTerminal("ERROR", err.message);
             setNodeState('normal', 'TAP TO SPEAK');
         }
-    }
-
-    function playLocalBeep(freq, duration) {
-        try {
-            const context = new (window.AudioContext || window.webkitAudioContext)();
-            const osc = context.createOscillator();
-            osc.type = "sine";
-            osc.frequency.value = freq;
-            osc.connect(context.destination);
-            osc.start();
-            setTimeout(() => osc.stop(), duration);
-        } catch(e) {}
     }
 </script>
 </body>
