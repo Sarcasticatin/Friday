@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GHOST-AI // JARVIS NODE</title>
+    <style>
+        body {
+            background-color: #000;
+            color: #00ff00;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            border: 1px solid #00ff00;
+            width: 90vw;
+            max-width: 400px;
+            height: 85vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .header {
+            font-weight: bold;
+            border-bottom: 1px solid #00ff00;
+            padding-bottom: 10px;
+            text-align: center;
+            letter-spacing: 2px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .power-btn {
+            background: #000;
+            color: #ff0000;
+            border: 1px solid #ff0000;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .power-btn.online {
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            box-shadow: 0 0 10px #00ff00;
+        }
+        .terminal-box {
+            flex-grow: 1;
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px dashed #00ff00;
+            background-color: rgba(0, 20, 0, 0.2);
+            overflow-y: auto;
+            font-size: 14px;
+        }
+        .input-area {
+            display: flex;
+            gap: 10px;
+        }
+        input[type="text"] {
+            flex-grow: 1;
+            background: #000;
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            padding: 10px;
+            font-family: inherit;
+        }
+        button.execute {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <span>GHOST-AI // JARVIS NODE</span>
+        <button id="powerBtn" class="power-btn" onclick="toggleJarvisSystem()">OFFLINE</button>
+    </div>
+
+    <div class="terminal-box" id="terminal">
+        [GHOST]: System Standby. Toggle Power Button to link voice node. Native Web Engine Active.
+    </div>
+
+    <div class="input-area">
+        <input type="text" id="instruction" placeholder="Instruction...">
+        <button class="execute" onclick="manualExecute()">EXECUTE</button>
+    </div>
+</div>
+
+<!-- Invisible Audio for iOS Safari Background Bypass -->
+<audio id="silentTrack" src="silent.mp3" loop playsinline></audio>
+
+<script>
+    // Config: Sirf apni OpenAI API Key daalein
+    const OPENAI_API_KEY = ""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”";
+
+    let isSystemActive = false;
+    let recognition = null;
+    let mediaRecorder = null;
+    let audioChunks = [];
+    
+    const terminal = document.getElementById('terminal');
+    const powerBtn = document.getElementById('powerBtn');
+    const silentTrack = document.getElementById('silentTrack');
+
+    function logToTerminal(sender, message) {
+        terminal.innerHTML += `<br><br>[${sender}]: ${message}`;
+        terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    // 🛑/🟢 MASTER SWITCH LOGIC
+    async function toggleJarvisSystem() {
+        if (isSystemActive) {
+            // Stop everything
+            if (recognition) recognition.stop();
+            silentTrack.pause();
+            
+            powerBtn.innerText = "OFFLINE";
+            powerBtn.classList.remove('online');
+            logToTerminal("SYSTEM", "Voice node offline. Battery saving mode active.");
+            isSystemActive = false;
+        } else {
+            try {
+                logToTerminal("SYSTEM", "Initializing continuous listener...");
+                
+                // Play silent MP3 to trick iOS background limitations
+                await silentTrack.play();
+
+                // Native Browser Speech Recognition Setup
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (!SpeechRecognition) {
+                    alert("Speech Recognition not supported on this browser. Use Safari on iOS.");
+                    return;
+                }
+
+                recognition = new SpeechRecognition();
+                recognition.continuous = true; // Keep listening continuously
+                recognition.interimResults = false; // Only final results
+                recognition.lang = 'en-US'; // Or 'hi-IN' if you talk purely in Hindi
+
+                recognition.onresult = function(event) {
+                    const lastResultIndex = event.results.length - 1;
+                    const speechText = event.results[lastResultIndex][0].transcript.trim().toLowerCase();
+                    
+                    console.log("Heard phrase:", speechText);
+
+                    // Wake-word checking
+                    if (speechText.includes("jarvis")) {
+                        logToTerminal("JARVIS", "Listening, sir...");
+                        playBeep(440, 150); // Beep to indicate Jarvis is listening
+                        
+                        // Stop wake-word listener temporarily so it doesn't record its own processing
+                        recognition.stop(); 
+                        startCommandRecording();
+                    }
+                };
+
+                recognition.onend = function() {
+                    // Loop execution: Restart listening automatically if system is still active
+                    if (isSystemActive) recognition.start();
+                };
+
+                recognition.start();
+
+                powerBtn.innerText = "ONLINE";
+                powerBtn.classList.add('online');
+                logToTerminal("SYSTEM", "Jarvis node linked. Wake-word: 'Jarvis'");
+                isSystemActive = true;
+            } catch (err) {
+                logToTerminal("ERROR", `Initialization failed: ${err.message}`);
+            }
+        }
+    }
+
+    // 🎤 COMMAND RECORDING PIPELINE
+    async function startCommandRecording() {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+        audioChunks = [];
+
+        mediaRecorder.ondataavailable = e => {
+            if (e.data.size > 0) audioChunks.push(e.data);
+        };
+
+        mediaRecorder.onstop = async () => {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            logToTerminal("SYSTEM", "Processing via OpenAI Cloud...");
+            processVoiceCommand(audioBlob);
+        };
+
+        mediaRecorder.start();
+        
+        // Listen to command for exactly 5 seconds
+        setTimeout(() => {
+            if(mediaRecorder.state === "recording") {
+                mediaRecorder.stop();
+                stream.getTracks().forEach(track => track.stop()); // Release microphone lock
+            }
+        }, 5000);
+    }
+
+    // 🧠 CORE OPENAI PIPELINE
+    async function processVoiceCommand(audioBlob) {
+        try {
+            // 1. Audio to Text (Whisper)
+            const formData = new FormData();
+            formData.append("file", audioBlob, "query.webm");
+            formData.append("model", "whisper-1");
+
+            const transResponse = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+                method: "POST",
+                headers: { "Authorization": `Bearer ${OPENAI_API_KEY}` },
+                body: formData
+            });
+            const transData = await transResponse.json();
+            const userCommand = transData.text;
+            
+            if(!userCommand || userCommand.trim() === "") {
+                logToTerminal("SYSTEM", "No clear speech detected. Resuming wake-word scanner.");
+                if(isSystemActive) recognition.start();
+                return;
+            }
+            logToTerminal("USER", userCommand);
+
+            // 2. Chat Completion (GPT-4o)
+            const gptResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${OPENAI_API_KEY}`
+                },
+                body: JSON.stringify({
+                    model: "gpt-4o",
+                    messages: [
+                        { role: "system", content: "You are Jarvis. Tony Stark's sharp, concise, and professional personal AI assistant. Keep responses short and conversational, as they will be spoken out loud. Avoid bullet points or special symbols." },
+                        { role: "user", content: userCommand }
+                    ]
+                })
+            });
+            const gptData = await gptResponse.json();
+            const jarvisReply = gptData.choices[0].message.content;
+            logToTerminal("JARVIS", jarvisReply);
+
+            // 3. Text to Audio (OpenAI TTS)
+            const ttsResponse = await fetch("https://api.openai.com/v1/audio/speech", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${OPENAI_API_KEY}`
+                },
+                body: JSON.stringify({
+                    model: "tts-1",
+                    voice: "onyx", 
+                    input: jarvisReply
+                })
+            });
+            
+            const audioBlobReturn = await ttsResponse.blob();
+            const audioUrl = URL.createObjectURL(audioBlobReturn);
+            const voiceOutput = new Audio(audioUrl);
+            
+            // Re-start wake word engine right after the audio finishes playing
+            voiceOutput.onended = () => {
+                if (isSystemActive) recognition.start();
+            };
+
+            await voiceOutput.play();
+
+        } catch (err) {
+            logToTerminal("ERROR", `Failed execution stream: ${err.message}`);
+            // Restart if everything fails
+            if (isSystemActive) recognition.start();
+        }
+    }
+
+    function manualExecute() {
+        const text = document.getElementById('instruction').value;
+        if(text) logToTerminal("USER", text);
+    }
+
+    function playBeep(freq, duration) {
+        const context = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = context.createOscillator();
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        osc.connect(context.destination);
+        osc.start();
+        setTimeout(() => osc.stop(), duration);
+    }
+</script>
+</body>
+</html>
