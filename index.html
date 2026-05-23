@@ -2,15 +2,47 @@
 <html>
 <body style="background:black;color:lime;font-family:monospace;">
 
-<button id="b">CLICK</button>
+<button id="b">TEST OPENAI</button>
 
 <pre id="o">READY</pre>
 
 <script>
 
+const API_KEY = 
+"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” ;
+
 document.getElementById("b").onclick = async () => {
 
-document.getElementById("o").innerText = "BUTTON OK";
+const o = document.getElementById("o");
+
+o.innerText = "CONNECTING...";
+
+try {
+
+const r = await fetch("https://api.openai.com/v1/models", {
+
+method: "GET",
+
+headers: {
+"Authorization": `Bearer ${API_KEY}`
+}
+
+});
+
+const text = await r.text();
+
+console.log(text);
+
+o.innerText = text;
+
+}
+catch(e){
+
+console.log(e);
+
+o.innerText = e.message;
+
+}
 
 };
 
