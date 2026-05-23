@@ -1,62 +1,16 @@
 <!DOCTYPE html>
 <html>
-<body style="background:black;color:#00ff00;font-family:monospace;">
+<body style="background:black;color:lime;font-family:monospace;">
 
-<button id="btn">TEST OPENAI</button>
+<button id="b">CLICK</button>
 
-<pre id="out">READY</pre>
+<pre id="o">READY</pre>
 
 <script>
 
-const API_KEY = 
-"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”;
+document.getElementById("b").onclick = async () => {
 
-document.getElementById("btn").onclick = async () => {
-
-const out = document.getElementById("out");
-
-out.innerText = "SENDING...";
-
-try {
-
-const response = await fetch(
-"https://api.openai.com/v1/chat/completions",
-{
-method: "POST",
-
-headers: {
-"Content-Type": "application/json",
-"Authorization": `Bearer ${API_KEY}`
-},
-
-body: JSON.stringify({
-
-model: "gpt-4.1-mini",
-
-messages: [
-{
-role: "user",
-content: "hello"
-}
-]
-
-})
-
-}
-);
-
-const text = await response.text();
-
-console.log(text);
-
-out.innerText = text;
-
-}
-catch(err){
-
-out.innerText = err.message;
-
-}
+document.getElementById("o").innerText = "BUTTON OK";
 
 };
 
