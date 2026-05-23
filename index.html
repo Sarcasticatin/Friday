@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GHOST-AI // JARVIS NODE</title>
     <style>
+        /* Matrix/Neon Green Theme Matching Your UI (image_3.png) */
         body {
             background-color: #000;
             color: #00ff00;
@@ -25,6 +26,7 @@
             justify-content: space-between;
             padding: 20px;
             box-sizing: border-box;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.2);
         }
         .header {
             font-weight: bold;
@@ -43,6 +45,8 @@
             padding: 5px 10px;
             cursor: pointer;
             font-weight: bold;
+            font-family: inherit;
+            transition: all 0.3s ease;
         }
         .power-btn.online {
             color: #00ff00;
@@ -54,9 +58,11 @@
             margin: 20px 0;
             padding: 15px;
             border: 1px dashed #00ff00;
-            background-color: rgba(0, 20, 0, 0.2);
+            background-color: rgba(0, 20, 0, 0.1);
             overflow-y: auto;
             font-size: 14px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
         .input-area {
             display: flex;
@@ -69,6 +75,7 @@
             color: #00ff00;
             padding: 10px;
             font-family: inherit;
+            outline: none;
         }
         button.execute {
             background: #00ff00;
@@ -77,6 +84,10 @@
             padding: 10px 20px;
             font-weight: bold;
             cursor: pointer;
+            font-family: inherit;
+        }
+        button.execute:active {
+            background: #00cc00;
         }
     </style>
 </head>
@@ -85,24 +96,23 @@
 <div class="container">
     <div class="header">
         <span>GHOST-AI // JARVIS NODE</span>
+        <!-- Master Power Switch for Audio Context Unlock & Loop Activation -->
         <button id="powerBtn" class="power-btn" onclick="toggleJarvisSystem()">OFFLINE</button>
     </div>
 
-    <div class="terminal-box" id="terminal">
-        [GHOST]: System Standby. Toggle Power Button to link voice node. Native Web Engine Active.
-    </div>
+    <div class="terminal-box" id="terminal">[GHOST]: System Standby. Toggle Power Button to link voice node. Native Web Engine Active.</div>
 
     <div class="input-area">
-        <input type="text" id="instruction" placeholder="Instruction...">
+        <input type="text" id="instruction" placeholder="Instruction..." onkeydown="if(event.key === 'Enter') manualExecute()">
         <button class="execute" onclick="manualExecute()">EXECUTE</button>
     </div>
 </div>
 
-<!-- Invisible Audio for iOS Safari Background Bypass -->
+<!-- Invisible Audio tag to bypass iOS Safari background playback restrictions -->
 <audio id="silentTrack" src="silent.mp3" loop playsinline></audio>
 
 <script>
-    // Config: Sirf apni OpenAI API Key daalein
+    // ⚠️ REPLACED KEY LOCATION: Apni OpenAI Paid Key Yahan Dalein
     const OPENAI_API_KEY = ""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”";
 
     let isSystemActive = false;
@@ -114,6 +124,7 @@
     const powerBtn = document.getElementById('powerBtn');
     const silentTrack = document.getElementById('silentTrack');
 
+    // Terminal Logging System
     function logToTerminal(sender, message) {
         terminal.innerHTML += `<br><br>[${sender}]: ${message}`;
         terminal.scrollTop = terminal.scrollHeight;
@@ -122,7 +133,7 @@
     // 🛑/🟢 MASTER SWITCH LOGIC
     async function toggleJarvisSystem() {
         if (isSystemActive) {
-            // Stop everything
+            // Stop and Reset Engine
             if (recognition) recognition.stop();
             silentTrack.pause();
             
@@ -134,40 +145,40 @@
             try {
                 logToTerminal("SYSTEM", "Initializing continuous listener...");
                 
-                // Play silent MP3 to trick iOS background limitations
+                // Hack 1: Start looping silence to hijack audio stream lock
                 await silentTrack.play();
 
-                // Native Browser Speech Recognition Setup
+                // Native iOS/Safari Speech Recognition Verification
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                 if (!SpeechRecognition) {
-                    alert("Speech Recognition not supported on this browser. Use Safari on iOS.");
+                    alert("Speech Recognition is not supported on this browser context. Please use Safari on iOS.");
                     return;
                 }
 
                 recognition = new SpeechRecognition();
-                recognition.continuous = true; // Keep listening continuously
-                recognition.interimResults = false; // Only final results
-                recognition.lang = 'en-US'; // Or 'hi-IN' if you talk purely in Hindi
+                recognition.continuous = true;
+                recognition.interimResults = false;
+                recognition.lang = 'en-US';
 
+                // Realtime Web Speech Wake-word Scanner
                 recognition.onresult = function(event) {
                     const lastResultIndex = event.results.length - 1;
                     const speechText = event.results[lastResultIndex][0].transcript.trim().toLowerCase();
                     
-                    console.log("Heard phrase:", speechText);
+                    console.log("Heard background phrase:", speechText);
 
-                    // Wake-word checking
                     if (speechText.includes("jarvis")) {
                         logToTerminal("JARVIS", "Listening, sir...");
-                        playBeep(440, 150); // Beep to indicate Jarvis is listening
+                        playBeep(440, 150); // Audible notification cue
                         
-                        // Stop wake-word listener temporarily so it doesn't record its own processing
+                        // Stop wake-word engine temporarily so it doesn't loop record itself
                         recognition.stop(); 
                         startCommandRecording();
                     }
                 };
 
                 recognition.onend = function() {
-                    // Loop execution: Restart listening automatically if system is still active
+                    // Automatically respawn loop if system power is still ON
                     if (isSystemActive) recognition.start();
                 };
 
@@ -175,45 +186,94 @@
 
                 powerBtn.innerText = "ONLINE";
                 powerBtn.classList.add('online');
-                logToTerminal("SYSTEM", "Jarvis node linked. Wake-word: 'Jarvis'");
+                logToTerminal("SYSTEM", "Jarvis node linked safely. Continuous wake-word mode 'Jarvis' is ARMED.");
                 isSystemActive = true;
             } catch (err) {
-                logToTerminal("ERROR", `Initialization failed: ${err.message}`);
+                logToTerminal("ERROR", `Initialization failure: ${err.message}`);
             }
         }
     }
 
-    // 🎤 COMMAND RECORDING PIPELINE
-    async function startCommandRecording() {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-        audioChunks = [];
-
-        mediaRecorder.ondataavailable = e => {
-            if (e.data.size > 0) audioChunks.push(e.data);
-        };
-
-        mediaRecorder.onstop = async () => {
-            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-            logToTerminal("SYSTEM", "Processing via OpenAI Cloud...");
-            processVoiceCommand(audioBlob);
-        };
-
-        mediaRecorder.start();
+    // 🎤 TEXT INPUT PROCESSING PIPELINE (JAB EXECUTE BUTTON DABAO)
+    async function manualExecute() {
+        const textInput = document.getElementById('instruction').value;
+        if (!textInput || textInput.trim() === "") return;
         
-        // Listen to command for exactly 5 seconds
-        setTimeout(() => {
-            if(mediaRecorder.state === "recording") {
-                mediaRecorder.stop();
-                stream.getTracks().forEach(track => track.stop()); // Release microphone lock
-            }
-        }, 5000);
+        logToTerminal("USER", textInput);
+        document.getElementById('instruction').value = ""; // Clear input node directly
+
+        // Temporarily pause speech recognition to avoid cross-talk processing if active
+        if (isSystemActive && recognition) recognition.stop();
+
+        try {
+            logToTerminal("SYSTEM", "Thinking...");
+
+            // Step 1: Request Direct Text Pipeline to GPT-4o
+            const gptResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${OPENAI_API_KEY}`
+                },
+                body: JSON.stringify({
+                    model: "gpt-4o",
+                    messages: [
+                        { role: "system", content: "You are Jarvis. Tony Stark's sharp, concise, and professional personal AI assistant. Keep responses short and conversational, as they will be spoken out loud. Avoid bullet points or special symbols." },
+                        { role: "user", content: textInput }
+                    ]
+                })
+            });
+            const gptData = await gptResponse.json();
+            const jarvisReply = gptData.choices[0].message.content;
+            logToTerminal("JARVIS", jarvisReply);
+
+            // Step 2: Stream Response text straight into OpenAI TTS Engine
+            logToTerminal("SYSTEM", "Generating audio feedback stream...");
+            await streamVoiceFeedback(jarvisReply);
+
+        } catch (err) {
+            logToTerminal("ERROR", `Execution failure stream: ${err.message}`);
+            if (isSystemActive && recognition) recognition.start();
+        }
     }
 
-    // 🧠 CORE OPENAI PIPELINE
+    // 🎤 VOICE COMMAND CAPTURE PIPELINE (JAB MOUTH SE "JARVIS" BOLO)
+    async function startCommandRecording() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+            audioChunks = [];
+
+            mediaRecorder.ondataavailable = e => {
+                if (e.data.size > 0) audioChunks.push(e.data);
+            };
+
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                logToTerminal("SYSTEM", "Transcribing captured data stream...");
+                processVoiceCommand(audioBlob);
+            };
+
+            mediaRecorder.start();
+            
+            // Set 5-second dynamic window context for recording command text
+            setTimeout(() => {
+                if(mediaRecorder.state === "recording") {
+                    mediaRecorder.stop();
+                    stream.getTracks().forEach(track => track.stop()); // Release hardware mic lock
+                }
+            }, 5000);
+
+        } catch (err) {
+            logToTerminal("ERROR", `Recording hardware access failure: ${err.message}`);
+            if (isSystemActive) recognition.start();
+        }
+    }
+
+    // 🧠 PROCESS AUDIO STREAM FROM MICROPHONE
     async function processVoiceCommand(audioBlob) {
         try {
-            // 1. Audio to Text (Whisper)
+            // Task A: Speech-To-Text via Whisper API
             const formData = new FormData();
             formData.append("file", audioBlob, "query.webm");
             formData.append("model", "whisper-1");
@@ -227,13 +287,13 @@
             const userCommand = transData.text;
             
             if(!userCommand || userCommand.trim() === "") {
-                logToTerminal("SYSTEM", "No clear speech detected. Resuming wake-word scanner.");
+                logToTerminal("SYSTEM", "Audio parsing empty. Resuming background loop listener.");
                 if(isSystemActive) recognition.start();
                 return;
             }
             logToTerminal("USER", userCommand);
 
-            // 2. Chat Completion (GPT-4o)
+            // Task B: Pass response string to GPT-4o Brain Core
             const gptResponse = await fetch("https://api.openai.com/v1/chat/completions", {
                 method: "POST",
                 headers: {
@@ -243,7 +303,7 @@
                 body: JSON.stringify({
                     model: "gpt-4o",
                     messages: [
-                        { role: "system", content: "You are Jarvis. Tony Stark's sharp, concise, and professional personal AI assistant. Keep responses short and conversational, as they will be spoken out loud. Avoid bullet points or special symbols." },
+                        { role: "system", content: "You are Jarvis. Tony Stark's witty, sharp, concise personal assistant. Keep responses brief, conversational, and direct, as they will be read aloud. Do not use markdown." },
                         { role: "user", content: userCommand }
                     ]
                 })
@@ -252,7 +312,18 @@
             const jarvisReply = gptData.choices[0].message.content;
             logToTerminal("JARVIS", jarvisReply);
 
-            // 3. Text to Audio (OpenAI TTS)
+            // Task C: Stream Audio Processing Output Response
+            await streamVoiceFeedback(jarvisReply);
+
+        } catch (err) {
+            logToTerminal("ERROR", `Voice stream execution pipeline failure: ${err.message}`);
+            if (isSystemActive) recognition.start();
+        }
+    }
+
+    // 🗣️ REUSABLE AUDIO STREAM UTILITY (SHARED TTS CALL FOR TEXT & VOICE)
+    async function streamVoiceFeedback(textToSpeak) {
+        try {
             const ttsResponse = await fetch("https://api.openai.com/v1/audio/speech", {
                 method: "POST",
                 headers: {
@@ -261,8 +332,8 @@
                 },
                 body: JSON.stringify({
                     model: "tts-1",
-                    voice: "onyx", 
-                    input: jarvisReply
+                    voice: "onyx", // Deep masculine synth tone
+                    input: textToSpeak
                 })
             });
             
@@ -270,33 +341,31 @@
             const audioUrl = URL.createObjectURL(audioBlobReturn);
             const voiceOutput = new Audio(audioUrl);
             
-            // Re-start wake word engine right after the audio finishes playing
+            // Re-arm wake-word scanning thread engine immediately when audio playback terminates
             voiceOutput.onended = () => {
                 if (isSystemActive) recognition.start();
             };
 
             await voiceOutput.play();
-
         } catch (err) {
-            logToTerminal("ERROR", `Failed execution stream: ${err.message}`);
-            // Restart if everything fails
+            logToTerminal("ERROR", `Audio player engine crash: ${err.message}`);
             if (isSystemActive) recognition.start();
         }
     }
 
-    function manualExecute() {
-        const text = document.getElementById('instruction').value;
-        if(text) logToTerminal("USER", text);
-    }
-
+    // UI Audio Notification Core
     function playBeep(freq, duration) {
-        const context = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = context.createOscillator();
-        osc.type = "sine";
-        osc.frequency.value = freq;
-        osc.connect(context.destination);
-        osc.start();
-        setTimeout(() => osc.stop(), duration);
+        try {
+            const context = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = context.createOscillator();
+            osc.type = "sine";
+            osc.frequency.value = freq;
+            osc.connect(context.destination);
+            osc.start();
+            setTimeout(() => osc.stop(), duration);
+        } catch(e) {
+            console.log("Audio Context Beep prevented.");
+        }
     }
 </script>
 </body>
