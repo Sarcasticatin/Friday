@@ -6,10 +6,13 @@
 <style>
 body{
 background:black;
+color:#00ff00;
+font-family:monospace;
 display:flex;
 justify-content:center;
 align-items:center;
 height:100vh;
+flex-direction:column;
 }
 
 button{
@@ -18,41 +21,75 @@ font-size:20px;
 background:black;
 color:#00ff00;
 border:2px solid #00ff00;
+margin-bottom:20px;
+}
+
+#output{
+padding:20px;
+width:80%;
+border:1px solid #00ff00;
 }
 </style>
 </head>
 
 <body>
 
-<button id="btn">TEST BUTTON</button>
+<button id="btn">TEST GPT</button>
+
+<div id="output">
+Waiting...
+</div>
 
 <script>
 
-window.onload = () => {
+const API_KEY = "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”;
 
-const btn = document.getElementById("btn");
+document.getElementById("btn").addEventListener("click", async () => {
 
-btn.addEventListener("click", async () => {
+const output = document.getElementById("output");
 
-alert("BUTTON WORKING");
+output.innerHTML = "Contacting OpenAI...";
 
 try {
 
-await navigator.mediaDevices.getUserMedia({
-audio:true
+const res = await fetch("https://api.openai.com/v1/chat/completions", {
+
+method: "POST",
+
+headers: {
+"Content-Type": "application/json",
+"Authorization": `Bearer ${API_KEY}`
+},
+
+body: JSON.stringify({
+
+model: "gpt-4o-mini",
+
+messages: [
+{
+role: "user",
+content: "Hello Jarvis"
+}
+]
+
+})
+
 });
 
-alert("MIC WORKING");
+const data = await res.json();
+
+console.log(data);
+
+output.innerHTML =
+data.choices[0].message.content;
 
 } catch(err){
 
-alert(err.message);
+output.innerHTML = err.message;
 
 }
 
 });
-
-};
 
 </script>
 
