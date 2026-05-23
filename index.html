@@ -1,68 +1,23 @@
 <!DOCTYPE html>
 <html>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<body style="background:black;color:#00ff00;font-family:monospace;">
 
-<title>Jarvis Debug</title>
+<button id="btn">TEST OPENAI</button>
 
-<style>
-
-body{
-background:black;
-color:#00ff00;
-font-family:monospace;
-display:flex;
-justify-content:center;
-align-items:center;
-flex-direction:column;
-height:100vh;
-margin:0;
-}
-
-button{
-padding:20px;
-font-size:22px;
-background:black;
-color:#00ff00;
-border:2px solid #00ff00;
-margin-bottom:20px;
-}
-
-#output{
-width:85%;
-max-width:500px;
-min-height:150px;
-border:2px solid #00ff00;
-padding:20px;
-word-wrap:break-word;
-}
-
-</style>
-</head>
-
-<body>
-
-<button id="btn">START TEST</button>
-
-<div id="output">
-READY
-</div>
+<pre id="out">READY</pre>
 
 <script>
 
-const API_KEY =  
+const API_KEY = 
 "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”;
 
-const btn = document.getElementById("btn");
-const output = document.getElementById("output");
+document.getElementById("btn").onclick = async () => {
 
-btn.onclick = async () => {
+const out = document.getElementById("out");
 
-output.innerHTML = "BUTTON CLICKED";
+out.innerText = "SENDING...";
 
 try {
-
-output.innerHTML = "SENDING REQUEST...";
 
 const response = await fetch(
 "https://api.openai.com/v1/chat/completions",
@@ -76,12 +31,12 @@ headers: {
 
 body: JSON.stringify({
 
-model: "gpt-4o-mini",
+model: "gpt-4.1-mini",
 
 messages: [
 {
 role: "user",
-content: "Hello"
+content: "hello"
 }
 ]
 
@@ -90,22 +45,16 @@ content: "Hello"
 }
 );
 
-output.innerHTML = "REQUEST SENT<br><br>WAITING RESPONSE...";
-
 const text = await response.text();
 
 console.log(text);
 
-output.innerHTML =
-"RAW RESPONSE:<br><br>" + text;
+out.innerText = text;
 
 }
 catch(err){
 
-console.log(err);
-
-output.innerHTML =
-"ERROR:<br><br>" + err.message;
+out.innerText = err.message;
 
 }
 
